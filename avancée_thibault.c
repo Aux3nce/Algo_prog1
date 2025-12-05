@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #define TAILLE_MAX 100
 
 typedef struct {
@@ -57,16 +58,15 @@ void afficher_polynome (polynome *A) {
   printf("\n");
 }
 
-float evaluation_polynome(float a, polynome *A) {
-int i;
-float S=0;
-float puiss_a=1;
-for (i = 0; i<=A->taille-1;i--) {
-S+=A->coef[A->taille-1-i]*puiss_a;
-puiss_a=puiss_a*a;
+float evaluation_polynome(int a, polynome *A) {
+    float S = 0;
+    for (int i = 0; i < A->taille; i++) {
+        S = S * a + A->coef[i];  // Application de la méthode de Horner
+    }
+    return S;
 }
-return S;
-}
+
+
 
 polynome *somme_polynomes(polynome *A, polynome *B) {
   polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
@@ -109,8 +109,6 @@ polynome *somme_polynomes(polynome *A, polynome *B) {
 
 
 
-
-
 polynome *produits_polynomes(polynome *A, polynome *B) {
   polynome *C = malloc(sizeof(polynome)); // Allocation mémoire
   if (!C) return NULL;
@@ -127,6 +125,8 @@ polynome *produits_polynomes(polynome *A, polynome *B) {
   return C;
 }
 
+
+
 polynome *derivee_polynome(polynome *A) {
   polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
@@ -138,22 +138,17 @@ polynome *derivee_polynome(polynome *A) {
 }
 
 polynome *derivee_ordre_n(polynome *A, int n) {
-polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
-  if (!C) return NULL;
-  if (n == 0) {
-  return A;
-  }
- 
-  else {
-  polynome *temporaire = A;
-  int k;
-  for (k = 0; k<n; k++) {
-  C = derivee_polynome(temporaire);
-  free (temporaire);
-  temporaire = C;
-  }
-  }
-  return C;
+    polynome *C = malloc(sizeof(polynome)); // Allocation mémoire pour C
+    if (!C) return NULL; // Vérification d'allocation mémoire
+    polynome *temporaire = A;
+
+    for (int k = 0; k < n; k++) {
+        C = derivee_polynome(temporaire); // Calcul de la dérivée
+        // temporaire ne doit pas être libéré ici, car nous devons le garder pour les futures dérivées.
+        temporaire = C; // Met temporaire à jour avec la nouvelle dérivée
+    }
+
+    return C;
 }
 
 float integrale_polynome(polynome *A, int a, int b) {
@@ -168,71 +163,84 @@ puiss_b=puiss_b*b;
 }
 return S;  
 }
+
+
 int fact(int n) {
-if (n == 0 || n == 1) {
-return 1;
-}
-else {
-int P = 1;
-int k;
-for (k=1; k<=n; k++){
-P = P*k;
-}
-return P;
-}
+    int P = 1;
+    for (int k = 1; k <= n; k++) {
+        P *= k;
+    }
+    return P;
 }
 
-polynome *developpement_limite(polynome *A, int a) {
-polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
-if (!C) return NULL;
-printf("A quel ordre voulez-vous faire votre DL : ");
-int n;
-scanf("%d",&n);
-C->taille = n+1;
-int i;
-for(i = 0; i<=n; i++) {
-polynome *derivee = derivee_ordre_n(A,i);
-int val = evaluation_polynome(a, derivee);
-C->coef[i] = val/fact(i);
-free(derivee);
-}
-return C;
+/*polynome *developpement_limite(polynome *A, int a) {
+    polynome *C = malloc(sizeof(polynome)); // Allocation mémoire pour C
+    if (!C) return NULL; // Vérification d'allocation mémoire
+
+    printf("A quel ordre voulez-vous faire votre DL : ");
+    int n;
+    scanf("%d", &n);
+
+    // Initialisation des coefficients de C à 0
+    for (int i = 0; i <= n; i++) {
+        C->coef[i] = 0;
+    }
+
+    for (int i = 0; i <= n; i++) {
+        // Calcul de la dérivée d'ordre i
+        polynome *derivee = derivee_ordre_n(A, i);
+
+        // Evaluation de la dérivée en a
+        int val = evaluation_polynome(a, derivee);
+
+        // Calcul du terme du développement limité : val / i!
+        C->coef[i] = val / fact(i);
+
+        free(derivee); // Libération de la mémoire allouée pour cette dérivée
+    }
+
+    return C; // Retourner le développement limité
+}*/
+
+
+
+void developpement_limite(polynome *A, int n, float a) {
+    // Evaluation du polynôme au point a
+    float f = evaluation_polynome(a, A);  
+    printf("Le développement de Taylor de p est :\n");
+    printf("%.0f", f);  // Affichage du terme constant A(a)
+
+    // Pour chaque dérivée jusqu'à l'ordre n
+    polynome *temporaire = malloc(sizeof(polynome));  // Allouer mémoire pour le polynôme temporaire
+    if (!temporaire) {
+        printf("Erreur d'allocation mémoire\n");
+        return;
+    }
+    *temporaire = *A;  // Copier A dans temporaire
+
+    for (int i = 1; i <= n; i++) {
+        // Calcul de la dérivée d'ordre i
+        polynome *deriv = derivee_polynome(temporaire);
+        float t = evaluation_polynome(a, deriv);  // Evaluation de la dérivée en a
+        int m = fact(i);  // Calcul de i!
+
+        // Affichage du terme du développement limité
+        // On affiche (X - a) plutôt que (X + a)
+        if (a != 0) {  // Si a != 0, on utilise (x - a)
+            printf(" + ((X - %.0f)^%d)/%d * %.0f", a, i, m, t);
+        } else {  // Si a == 0, c'est (X)^i
+            printf(" + (X^%d)/%d * %.0f", i, m, t);
+        }
+
+        free(temporaire);  // Libérer la mémoire de la dérivée précédente
+
+        temporaire = deriv;  // Copier la nouvelle dérivée pour l'itération suivante
+    }
+
+    free(temporaire);  // Libérer la mémoire du polynôme temporaire après le dernier calcul
+    printf("\n");
 }
 
-void afficher_DL_polynome(polynome *A, int a) {
-  if (A == NULL) return;
- 
-  int affiche_qqchose = 0;
- 
-  for (int i = A->taille - 1; i>=0; i--) {
-    int coef = A->coef[i];
-   
-    if (coef != 0) {
-      if (affiche_qqchose) {
-        printf(" %c ", (coef > 0) ? '+' : '-');
-        if (coef < 0) coef = -coef;
-    }
-    else if (coef < 0) {
-      printf("-");
-      coef = -coef;
-    }
-   
-    if (coef != 1 || i == 0) {
-      printf("%d", coef);
-    }
-   
-    if (i > 0) {
-      printf("(X-%d)", a);
-      if (i > 1) printf("^%d", i);
-    }
-    affiche_qqchose = 1;
-    }
-  }
-  if (!affiche_qqchose) {
-    printf("0");
-  }
-  printf("\n");
-}
 
 int main(void) {
 
@@ -275,16 +283,25 @@ int main(void) {
         afficher_polynome(C);
         break;
       case 4 :
+      printf("Sélectionnez la borne inférieure : ");
+int a;
+scanf("%d", &a);
+printf("Sélectionnez la borne supérieure : ");
+int b;
+scanf("%d", &b);
       A = initialiser_polynome();
-printf("lintégrale du polynome sur cet intervalle vaut : %f", integrale_polynome(&A));
+printf("intégrale du polynome sur cet intervalle vaut : %f", integrale_polynome(&A, a, b));
         break;
       case 5 :
+      int u;
       printf("En quel point voulez-vous faire votre DL : ");
-float a;
-scanf("%f ",&a);
+scanf("%d",&u);
+int n;
+      printf("A quel ordre voulez-vous faire votre DL : ");
+scanf("%d",&n);
 A = initialiser_polynome();
-C = developpement_limite(&A,a);
-afficher_DL_polynome(C,a);
+developpement_limite(&A,n,a);
+//afficher_DL_polynome(C,u);
         break;
       case 6 :
 
