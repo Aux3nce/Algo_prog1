@@ -35,7 +35,7 @@ polynome *somme_polynomes(polynome *A, polynome *B);
 polynome *produits_polynomes(polynome *A, polynome *B);
 
 /* ==========Dérivation d'un polynôme========== */
-polynome *derivee_polynome(polynome *A)
+polynome *derivee_polynome(polynome *A);
 polynome *derivee_ordre_n(polynome *A, int n);
 
 /* ==========Intégrale d'un polynôme sur un segment========== */
