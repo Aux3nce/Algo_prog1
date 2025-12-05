@@ -395,7 +395,7 @@ int main(void) {
         break;
       case 4 :
         A = initialiser_polynome();
-        C = integrate_polynome(&A);
+        C = integrale_polynome(&A);
         afficher_polynome(C);
         break;
       case 5 :
