@@ -4,11 +4,20 @@
 #include <math.h>
 #include <time.h>
 
+/* ==========Définition de notre structure========== */
+
+#define TAILLE_MAX 100
+
+typedef struct {
+  float coef[TAILLE_MAX];
+  int taille;
+} polynome;
+
 /* ==========Fichier Journal (LOG)========== */
 FILE *log_file = NULL;
 
-void ouvrir_log() {
-    log_file = fopen("operations.log", "a");  // "a" pour append (ajouter)
+void ouvrir_log(void) {
+    log_file = fopen("operations.log", "a");
     if (log_file) {
         time_t now;
         time(&now);
@@ -30,21 +39,12 @@ void logger_operation(const char *operation, const char *details) {
     }
 }
 
-void fermer_log() {
+void fermer_log(void) {
     if (log_file) {
         fprintf(log_file, "=== Fin de session ===\n\n");
         fclose(log_file);
     }
 }
-
-/* ==========Définition de notre structure========== */
-
-#define TAILLE_MAX 100
-
-typedef struct {
-  float coef[TAILLE_MAX];
-  int taille;
-} polynome;
 
 /*==========Manipulation des polynômes==========*/
 
@@ -62,7 +62,7 @@ polynome initialiser_polynome(void) {
   
   // Logguer la création du polynôme
   char log_msg[200];
-  snprintf(log_msg, sizeof(log_msg), "Polynome degre %d initialise", degre);
+  snprintf(log_msg, sizeof(log_msg), "Polynome degre %d initialisé", degre);
   logger_operation("Initialisation", log_msg);
   
   return A;
@@ -137,7 +137,7 @@ void creer_fichier_polynome(const char *filename) {
     fprintf(file, "%d\n", degre);
     
     // Demander et écrire les coefficients
-    for (int i = 0; i <= degre; i++) {
+    for (int i = degre-1; i <= 0; i--) {
         float coef;
         printf("Coefficient de degre %d : ", i);
         scanf("%f", &coef);
@@ -165,7 +165,7 @@ void sauvegarder_polynome(polynome *A, const char *filename) {
     
     // Écrire les coefficients du degré 0 au degré N
     for (int i = 0; i < A->taille; i++) {
-        fprintf(file, "%.6f\n", A->coef[i]);
+        fprintf(file, "%.3f\n", A->coef[i]);
     }
     
     fclose(file);
@@ -177,7 +177,7 @@ void sauvegarder_polynome(polynome *A, const char *filename) {
     printf("Polynome sauvegarde avec succes dans %s\n", filename);
 }
 /*==========Enregistrement des polynômes==========*/
-polynome lire_polynome_clavier() {
+polynome lire_polynome_clavier(void) {
     polynome A = initialiser_polynome();
     logger_operation("Lecture", "Polynome saisi au clavier");
     return A;
@@ -216,8 +216,8 @@ polynome lire_polynome_fichier(const char *filename) {
     return A;
 }
 
-// Menu de choix d'entrée
-polynome initialiser_polynome_avec_choix() {
+// Menu de choix d'entrée des polynômes
+polynome initialiser_polynome_avec_choix(void) {
     printf("\nMode d'entree du polynome :\n");
     printf("1. Saisie clavier\n");
     printf("2. Fichier texte\n");
@@ -335,33 +335,25 @@ polynome *derivee_polynome(polynome *A) {
 }
 
 polynome *derivee_ordre_n(polynome *A, int n) {
-  if (n <= 0) {
-    polynome *copie = malloc(sizeof(polynome));
-    *copie = *A;
-    return copie;
-  }
-  
-  polynome *resultat = malloc(sizeof(polynome));
-  *resultat = *A;
-  
-  for (int i = 0; i < n; i++) {
-    polynome *temp = derivee_polynome(resultat);
-    free(resultat);
-    resultat = temp;
-    
-    if (resultat == NULL) {
-      logger_operation("ERREUR", "Echec dans derivee_ordre_n");
-      return NULL;
+    polynome *C = malloc(sizeof(polynome)); // Allocation mémoire pour C
+    if (!C) return NULL; // Vérification d'allocation mémoire
+    polynome *temporaire = A;
+
+    for (int k = 0; k < n; k++) {
+        C = derivee_polynome(temporaire); // Calcul de la dérivée
+        // temporaire ne doit pas être libéré ici, car nous devons le garder pour les futures dérivées.
+        temporaire = C; // Met temporaire à jour avec la nouvelle dérivée
     }
-  }
-  
+
   // Logguer l'opération
   char log_msg[200];
   snprintf(log_msg, sizeof(log_msg), "Derivee d'ordre %d calculee", n);
   logger_operation("Derivation multiple", log_msg);
   
-  return resultat;
+  return C;
 }
+
+/* ==========Intégrale d'un polynôme sur un segment========== */
 
 float integrale_polynome(polynome *A, float a, float b) {
   if (a > b) {
@@ -390,6 +382,8 @@ float integrale_polynome(polynome *A, float a, float b) {
   return S;
 }
 
+/* ==========Développement limité d'un polynôme========== */
+
 int fact(int n) {
   if (n == 0 || n == 1) {
     return 1;
@@ -402,70 +396,52 @@ int fact(int n) {
   }
 }
 
-polynome *developpement_limite(polynome *A, float a, int n) {
-  polynome *C = malloc(sizeof(polynome));
-  if (!C) {
-    logger_operation("ERREUR", "Echec allocation dans developpement_limite");
-    return NULL;
-  }
-  
-  C->taille = n + 1;
-  
-  // Initialiser tous les coefficients à 0
-  for (int i = 0; i < C->taille; i++) {
-    C->coef[i] = 0.0;
-  }
-  
-  // Calculer le DL
-  for (int i = 0; i <= n; i++) {
-    polynome *derivee = derivee_ordre_n(A, i);
-    if (derivee) {
-      float valeur = evaluation_polynome(derivee, a);
-      C->coef[i] = valeur / fact(i);
-      free(derivee);
-    }
-  }
-  
-  // Logguer l'opération
-  char log_msg[200];
-  snprintf(log_msg, sizeof(log_msg), "DL en %.2f a l'ordre %d", a, n);
-  logger_operation("Developpement limite", log_msg);
-  
-  return C;
-}
+void developpement_limite(polynome *A, int n, int a) {
+    float f;
+    f = evaluation_polynome(A, a); // On calcule A(a)
+    printf("%.0f", f); // On affiche A(a)
 
-void afficher_DL_polynome(polynome *A, float a) {
-  if (A == NULL) return;
-  
-  int affiche_qqchose = 0;
-  
-  for (int i = A->taille - 1; i >= 0; i--) {
-    float coef = A->coef[i];
-    
-    if (fabs(coef) > 1e-10) {
-      if (affiche_qqchose) {
-        printf(" %c ", (coef > 0) ? '+' : '-');
-        if (coef < 0) coef = -coef;
-      } else if (coef < 0) {
-        printf("-");
-        coef = -coef;
-      }
-      
-      if (fabs(coef) != 1.0 || i == 0) {
-        printf("%.2f", coef);
-      }
-      
-      if (i > 0) {
-        printf("(X-%.2f)", a);
-        if (i > 1) printf("^%d", i);
-      }
-      affiche_qqchose = 1;
+    // Pour chaque dérivée jusqu'à l'ordre n
+    polynome *temporaire = malloc(sizeof(polynome));  // Allouer mémoire pour le polynôme temporaire
+    if (!temporaire) {
+        printf("Erreur d'allocation mémoire\n");
+        return;
     }
-  }
-  if (!affiche_qqchose) {
-    printf("0");
-  }
-  printf("\n");
+    *temporaire = *A;  // Copier A dans temporaire
+
+    for (int i = 1; i <= n; i++) {
+        // Calcul de la dérivée
+        polynome *deriv = derivee_polynome(temporaire);
+        float t = evaluation_polynome(deriv, a); // Évaluation de la dérivée en a
+        int m = fact(i); // Calcul de i!
+        float x =t/m;
+        if (t == 0) {
+            printf(" ");
+        }
+        else {
+            // Affichage du terme du développement limité
+            if (a < 0) {
+            printf(" + %.0f*((X + %.0f)^%d)", x, fabs(a), i);
+            }
+            else if (a == 0) {
+                 printf(" + %.0f*(X^%d)", x, i);
+            }
+            else {
+                 printf(" + %.0f*((X - %d)^%d)", x, a, i);  // X - a, pas X + a
+            }
+        }
+        *temporaire = *deriv;  // D'abord copier
+        free(deriv);  
+    }
+
+    free(temporaire); // Libérer la mémoire du polynôme temporaire
+    printf("\n");
+
+    
+    // Logguer l'opération
+    char log_msg[200];
+    snprintf(log_msg, sizeof(log_msg), "Développement limité en %d d'un polynome de degre : %d", a, A->taille - 1);
+    logger_operation("Développement limité", log_msg);
 }
 
 /* ==========Recherche racine d'un polynôme========== */
@@ -561,7 +537,8 @@ int main(void) {
     printf("4. Integrale d'un polynome sur un intervalle\n");
     printf("5. Developpement limite d'un polynome autour d'un point\n");
     printf("6. Racine d'un polynome sur un intervalle\n");
-    printf("7. Quitter\n\n");
+    printf("7. Enregistrer un nouveau polynome\n");
+    printf("8. Quitter\n\n");
     printf("=========================\n\n");
     printf("Votre choix : ");
     scanf("%d", &choix);
@@ -570,11 +547,6 @@ int main(void) {
     char log_msg[50];
     snprintf(log_msg, sizeof(log_msg), "Choix menu : %d", choix);
     logger_operation("Menu", log_msg);
-
-    char filename[100];
-    printf("Nom du fichier pour sauvegarder (ex: mon_polynome.txt) : ");
-    scanf("%s", filename);
-    create_fichier_polynome(filename)
     
     switch(choix) {
       case 1: {
@@ -632,20 +604,14 @@ int main(void) {
       }
       
       case 5: {
-        A = initialiser_polynome_avec_choix();
-        float a;
+        int u;
+        printf("En quel point voulez-vous faire votre DL : ");
+        scanf("%d",&u);
         int n;
-        printf("Point pour le DL : ");
-        scanf("%f", &a);
-        printf("Ordre du DL : ");
-        scanf("%d", &n);
-        
-        C = developpement_limite(&A, a, n);
-        if (C) {
-          printf("\nDeveloppement limite en %.2f a l'ordre %d :\n", a, n);
-          afficher_DL_polynome(C, a);
-          free(C);
-        }
+        printf("A quel ordre voulez-vous faire votre DL : ");
+        scanf("%d",&n);
+        A = initialiser_polynome();
+        developpement_limite(&A,n,u);
         break;
       }
       
@@ -674,6 +640,14 @@ int main(void) {
         break;
       }
       case 7:
+        char filename[100];
+        printf("Nom du fichier pour sauvegarder (ex: mon_polynome.txt) : ");
+        scanf("%s", filename);
+        creer_fichier_polynome(filename);
+        A = initialiser_polynome();
+        sauvegarder_polynome(&A, filename);
+        break;
+      case 8:
         printf("\nProgramme termine. Operations enregistrees dans operations.log\n");
         logger_operation("Programme", "Fin normale");
         break;
@@ -684,7 +658,7 @@ int main(void) {
         break;
     }
     
-  } while (choix != 7);
+  } while (choix != 8);
   
   // Fermer le fichier log
   fermer_log();
