@@ -1,0 +1,634 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <time.h>
+
+/* ==========Fichier Journal (LOG)========== */
+FILE *log_file = NULL;
+
+void ouvrir_log() {
+    log_file = fopen("operations.log", "a");  // "a" pour append (ajouter)
+    if (log_file) {
+        time_t now;
+        time(&now);
+        fprintf(log_file, "\n=== Session du %s ===\n", ctime(&now));
+    } else {
+        printf("Attention : impossible d'ouvrir le fichier log\n");
+    }
+}
+
+void logger_operation(const char *operation, const char *details) {
+    if (log_file) {
+        time_t now;
+        time(&now);
+        struct tm *local = localtime(&now);
+        fprintf(log_file, "[%02d:%02d:%02d] %s - %s\n", 
+                local->tm_hour, local->tm_min, local->tm_sec,
+                operation, details);
+        fflush(log_file);  // Écrire immédiatement
+    }
+}
+
+void fermer_log() {
+    if (log_file) {
+        fprintf(log_file, "=== Fin de session ===\n\n");
+        fclose(log_file);
+    }
+}
+
+/* ==========Définition de notre structure========== */
+
+#define TAILLE_MAX 100
+
+typedef struct {
+  float coef[TAILLE_MAX];
+  int taille;
+} polynome;
+
+/*==========Manipulation des polynômes==========*/
+
+polynome initialiser_polynome(void) {
+  int degre;
+  printf("Indiquez le degre de votre polynome : ");
+  scanf("%d", &degre);
+  
+  polynome A;
+  A.taille = degre + 1;
+  for (int i = degre; i >= 0; i--) {
+    printf("Indiquez le coefficient de degre %d : ", i);
+    scanf("%f", &A.coef[i]);
+  }
+  
+  // Logguer la création du polynôme
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Polynome degre %d initialise", degre);
+  logger_operation("Initialisation", log_msg);
+  
+  return A;
+}
+
+void afficher_polynome (polynome *A) {
+  if (A == NULL) return;
+  
+  int affiche_qqchose = 0;
+  
+  for (int i = A->taille - 1; i>=0; i--) {
+    float coef = A->coef[i];  // Changé de int à float
+    
+    if (coef != 0) {
+      if (affiche_qqchose) {
+        printf(" %c ", (coef > 0) ? '+' : '-');
+        if (coef < 0) coef = -coef;
+      } else if (coef < 0) {
+        printf("-");
+        coef = -coef;
+      }
+    
+      if (fabs(coef) != 1.0 || i == 0) {
+        printf("%.2f", coef);  // Affichage avec 2 décimales
+      }
+    
+      if (i > 0) {
+        printf("X");
+        if (i > 1) printf("^%d", i);
+      }
+    
+      affiche_qqchose = 1;
+    }
+  }
+  if (!affiche_qqchose) {
+    printf("0");
+  }
+  
+  printf("\n");
+}
+
+float evaluation_polynome(polynome *A, float a) {
+  float S = 0.0;
+  float puiss_a = 1.0;
+  
+  for (int i = 0; i < A->taille; i++) {
+    S += A->coef[i] * puiss_a;
+    puiss_a *= a;
+  }
+  
+  // Logguer l'évaluation
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Evaluation en %.2f = %.6f", a, S);
+  logger_operation("Evaluation", log_msg);
+  
+  return S;
+}
+
+/*==========Enregistrement des polynômes==========*/
+polynome lire_polynome_clavier() {
+    polynome A = initialiser_polynome();
+    logger_operation("Lecture", "Polynome saisi au clavier");
+    return A;
+}
+
+polynome lire_polynome_fichier(const char *filename) {
+    polynome A;
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Erreur : impossible d'ouvrir le fichier %s\n", filename);
+        A.taille = 1;
+        A.coef[0] = 0;
+        
+        char log_msg[200];
+        snprintf(log_msg, sizeof(log_msg), "Echec ouverture fichier %s", filename);
+        logger_operation("ERREUR", log_msg);
+        
+        return A;
+    }
+    
+    // Format attendu : "degre coef0 coef1 ... coefN"
+    int degre;
+    fscanf(file, "%d", &degre);
+    A.taille = degre + 1;
+    
+    for (int i = 0; i < A.taille; i++) {
+        fscanf(file, "%f", &A.coef[i]);  // Changé de %d à %f
+    }
+    
+    fclose(file);
+    
+    char log_msg[200];
+    snprintf(log_msg, sizeof(log_msg), "Fichier %s lu - degre %d", filename, degre);
+    logger_operation("Lecture fichier", log_msg);
+    
+    return A;
+}
+
+// Menu de choix d'entrée
+polynome initialiser_polynome_avec_choix() {
+    printf("\nMode d'entree du polynome :\n");
+    printf("1. Saisie clavier\n");
+    printf("2. Fichier texte\n");
+    printf("Choix : ");
+    
+    int choix;
+    scanf("%d", &choix);
+    
+    if (choix == 2) {
+        char filename[100];
+        printf("Nom du fichier : ");
+        scanf("%s", filename);
+        return lire_polynome_fichier(filename);
+    } else {
+        return lire_polynome_clavier();
+    }
+}
+
+/* ==========Somme de 2 polynômes========== */
+
+polynome *somme_polynomes(polynome *A, polynome *B) {
+  polynome *C = malloc(sizeof(polynome));
+  if (!C) {
+    logger_operation("ERREUR", "Echec allocation memoire dans somme_polynomes");
+    return NULL;
+  }
+  
+  int taille_max = (A->taille > B->taille) ? A->taille : B->taille;
+  C->taille = taille_max;
+  
+  // Initialiser tous les coefficients à 0
+  for (int i = 0; i < C->taille; i++) {
+    C->coef[i] = 0.0;
+  }
+  
+  // Additionner les coefficients
+  for (int i = 0; i < A->taille; i++) {
+    C->coef[i] += A->coef[i];
+  }
+  
+  for (int i = 0; i < B->taille; i++) {
+    C->coef[i] += B->coef[i];
+  }
+  
+  // Réduire la taille si les coefficients les plus élevés sont nuls
+  while (C->taille > 1 && fabs(C->coef[C->taille-1]) < 1e-10) {
+    C->taille--;
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Somme effectuee - resultat degre %d", C->taille-1);
+  logger_operation("Somme", log_msg);
+  
+  return C;
+}
+
+/* ==========Produits de 2 polynômes========== */
+
+polynome *produits_polynomes(polynome *A, polynome *B) {
+  polynome *C = malloc(sizeof(polynome));
+  if (!C) {
+    logger_operation("ERREUR", "Echec allocation memoire dans produits_polynomes");
+    return NULL;
+  }
+  
+  C->taille = A->taille + B->taille - 1;
+  
+  // Initialiser tous les coefficients à 0
+  for (int i = 0; i < C->taille; i++) {
+    C->coef[i] = 0.0;
+  }
+  
+  // Calculer le produit
+  for (int i = 0; i < A->taille; i++) {
+    for (int j = 0; j < B->taille; j++) {
+      C->coef[i+j] += A->coef[i] * B->coef[j];
+    }
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Produit effectue - resultat degre %d", C->taille-1);
+  logger_operation("Produit", log_msg);
+  
+  return C;
+}
+
+/* ==========Dérivation d'un polynôme========== */
+
+polynome *derivee_polynome(polynome *A) {
+  polynome *C = malloc(sizeof(polynome));
+  if (!C) {
+    logger_operation("ERREUR", "Echec allocation memoire dans derivee_polynome");
+    return NULL;
+  }
+  
+  if (A->taille <= 1) {
+    C->taille = 1;
+    C->coef[0] = 0.0;
+  } else {
+    C->taille = A->taille - 1;
+    for (int i = 0; i < C->taille; i++) {
+      C->coef[i] = A->coef[i+1] * (i+1);
+    }
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Derivee calculee - degre %d -> %d", 
+           A->taille-1, C->taille-1);
+  logger_operation("Derivation", log_msg);
+  
+  return C;
+}
+
+polynome *derivee_ordre_n(polynome *A, int n) {
+  if (n <= 0) {
+    polynome *copie = malloc(sizeof(polynome));
+    *copie = *A;
+    return copie;
+  }
+  
+  polynome *resultat = malloc(sizeof(polynome));
+  *resultat = *A;
+  
+  for (int i = 0; i < n; i++) {
+    polynome *temp = derivee_polynome(resultat);
+    free(resultat);
+    resultat = temp;
+    
+    if (resultat == NULL) {
+      logger_operation("ERREUR", "Echec dans derivee_ordre_n");
+      return NULL;
+    }
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Derivee d'ordre %d calculee", n);
+  logger_operation("Derivation multiple", log_msg);
+  
+  return resultat;
+}
+
+float integrale_polynome(polynome *A, float a, float b) {
+  if (a > b) {
+    float temp = a;
+    a = b;
+    b = temp;
+  }
+  
+  float S = 0.0;
+  float puissance_a = a;
+  float puissance_b = b;
+  
+  // Intégrale de ∑ a_i x^i = ∑ a_i/(i+1) x^(i+1)
+  for (int i = 0; i < A->taille; i++) {
+    float terme = A->coef[i] / (float)(i + 1);
+    S += terme * (puissance_b - puissance_a);
+    puissance_a *= a;
+    puissance_b *= b;
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Integrale de %.2f a %.2f = %.6f", a, b, S);
+  logger_operation("Integration", log_msg);
+  
+  return S;
+}
+
+int fact(int n) {
+  if (n == 0 || n == 1) {
+    return 1;
+  } else {
+    int P = 1;
+    for (int k = 1; k <= n; k++) {
+      P = P * k;
+    }
+    return P;
+  }
+}
+
+polynome *developpement_limite(polynome *A, float a, int n) {
+  polynome *C = malloc(sizeof(polynome));
+  if (!C) {
+    logger_operation("ERREUR", "Echec allocation dans developpement_limite");
+    return NULL;
+  }
+  
+  C->taille = n + 1;
+  
+  // Initialiser tous les coefficients à 0
+  for (int i = 0; i < C->taille; i++) {
+    C->coef[i] = 0.0;
+  }
+  
+  // Calculer le DL
+  for (int i = 0; i <= n; i++) {
+    polynome *derivee = derivee_ordre_n(A, i);
+    if (derivee) {
+      float valeur = evaluation_polynome(derivee, a);
+      C->coef[i] = valeur / fact(i);
+      free(derivee);
+    }
+  }
+  
+  // Logguer l'opération
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "DL en %.2f a l'ordre %d", a, n);
+  logger_operation("Developpement limite", log_msg);
+  
+  return C;
+}
+
+void afficher_DL_polynome(polynome *A, float a) {
+  if (A == NULL) return;
+  
+  int affiche_qqchose = 0;
+  
+  for (int i = A->taille - 1; i >= 0; i--) {
+    float coef = A->coef[i];
+    
+    if (fabs(coef) > 1e-10) {
+      if (affiche_qqchose) {
+        printf(" %c ", (coef > 0) ? '+' : '-');
+        if (coef < 0) coef = -coef;
+      } else if (coef < 0) {
+        printf("-");
+        coef = -coef;
+      }
+      
+      if (fabs(coef) != 1.0 || i == 0) {
+        printf("%.2f", coef);
+      }
+      
+      if (i > 0) {
+        printf("(X-%.2f)", a);
+        if (i > 1) printf("^%d", i);
+      }
+      affiche_qqchose = 1;
+    }
+  }
+  if (!affiche_qqchose) {
+    printf("0");
+  }
+  printf("\n");
+}
+
+/* ==========Recherche racine d'un polynôme========== */
+
+float racine_interv(polynome *A, float a, float b, float eps, int Nmax) {
+  // Logguer le début de la recherche
+  char log_msg[200];
+  snprintf(log_msg, sizeof(log_msg), "Recherche racine dans [%.2f, %.2f], eps=%.1e, Nmax=%d", 
+           a, b, eps, Nmax);
+  logger_operation("Newton debut", log_msg);
+  
+  // Vérifier les signes aux bornes
+  float fa = evaluation_polynome(A, a);
+  float fb = evaluation_polynome(A, b);
+  
+  if (fa * fb > 0) {
+    snprintf(log_msg, sizeof(log_msg), 
+             "f(%.2f)=%.2e et f(%.2f)=%.2e de meme signe", a, fa, b, fb);
+    logger_operation("Newton attention", log_msg);
+    printf("Attention : f(a) et f(b) ont meme signe, pas de garantie de racine\n");
+  }
+  
+  // Choisir le meilleur point initial
+  float x0 = (fabs(fa) < fabs(fb)) ? a : b;
+  polynome *deriv = derivee_polynome(A);
+  
+  if (!deriv) {
+    logger_operation("ERREUR", "Echec calcul derivee dans Newton");
+    return (a + b) / 2.0;
+  }
+  
+  float x = x0;
+  int converged = 0;
+  
+  for (int n = 0; n < Nmax; n++) {
+    float fx = evaluation_polynome(A, x);
+    float fpx = evaluation_polynome(deriv, x);
+    
+    // Condition de convergence
+    if (fabs(fx) < eps) {
+      snprintf(log_msg, sizeof(log_msg), 
+               "Convergence apres %d iterations : x=%.6f, f(x)=%.2e", n+1, x, fx);
+      logger_operation("Newton succes", log_msg);
+      converged = 1;
+      break;
+    }
+    
+    // Éviter division par zéro
+    if (fabs(fpx) < 1e-15) {
+      snprintf(log_msg, sizeof(log_msg), "Derivee nulle en x=%.6f", x);
+      logger_operation("Newton erreur", log_msg);
+      break;
+    }
+    
+    // Itération de Newton
+    float x_new = x - fx / fpx;
+    
+    // Vérifier si on reste dans l'intervalle
+    if (x_new < a || x_new > b) {
+      x_new = (a + b) / 2.0;
+    }
+    
+    x = x_new;
+  }
+  
+  free(deriv);
+  
+  if (!converged) {
+    snprintf(log_msg, sizeof(log_msg), "Non convergence apres %d iterations", Nmax);
+    logger_operation("Newton echec", log_msg);
+  }
+  
+  return x;
+}
+
+/* ==========Affichage du menu========== */
+
+int main(void) {
+  // Ouvrir le fichier log au début
+  ouvrir_log();
+  logger_operation("Programme", "Demarrage");
+  
+  int choix;
+  polynome A, B;
+  polynome *C = NULL;
+  
+  do {
+    printf("\n\nQue souhaitez-vous faire ?\n");
+    printf("\n==========MENU==========\n\n");
+    printf("1. Somme de deux polynomes\n");
+    printf("2. Produit de deux polynomes\n");
+    printf("3. Derivee d'un polynome\n");
+    printf("4. Integrale d'un polynome sur un intervalle\n");
+    printf("5. Developpement limite d'un polynome autour d'un point\n");
+    printf("6. Racine d'un polynome sur un intervalle\n");
+    printf("7. Quitter\n\n");
+    printf("=========================\n\n");
+    printf("Votre choix : ");
+    scanf("%d", &choix);
+    
+    // Logguer le choix de l'utilisateur
+    char log_msg[50];
+    snprintf(log_msg, sizeof(log_msg), "Choix menu : %d", choix);
+    logger_operation("Menu", log_msg);
+    
+    switch(choix) {
+      case 1: {
+        printf("\n--- Premier polynome ---\n");
+        A = initialiser_polynome_avec_choix();
+        printf("\n--- Deuxieme polynome ---\n");
+        B = initialiser_polynome_avec_choix();
+        
+        C = somme_polynomes(&A, &B);
+        if (C) {
+          printf("\nResultat de la somme : ");
+          afficher_polynome(C);
+          free(C);
+        }
+        break;
+      }
+      
+      case 2: {
+        printf("\n--- Premier polynome ---\n");
+        A = initialiser_polynome_avec_choix();
+        printf("\n--- Deuxieme polynome ---\n");
+        B = initialiser_polynome_avec_choix();
+        
+        C = produits_polynomes(&A, &B);
+        if (C) {
+          printf("\nResultat du produit : ");
+          afficher_polynome(C);
+          free(C);
+        }
+        break;
+      }
+      
+      case 3: {
+        A = initialiser_polynome_avec_choix();
+        C = derivee_polynome(&A);
+        if (C) {
+          printf("\nDerivee du polynome : ");
+          afficher_polynome(C);
+          free(C);
+        }
+        break;
+      }
+      
+      case 4: {
+        A = initialiser_polynome_avec_choix();
+        float a, b;
+        printf("Intervalle d'integration [a, b] : ");
+        scanf("%f %f", &a, &b);
+        
+        float integrale = integrale_polynome(&A, a, b);
+        printf("\nIntegrale de ");
+        afficher_polynome(&A);
+        printf("sur [%.2f, %.2f] = %.6f\n", a, b, integrale);
+        break;
+      }
+      
+      case 5: {
+        A = initialiser_polynome_avec_choix();
+        float a;
+        int n;
+        printf("Point pour le DL : ");
+        scanf("%f", &a);
+        printf("Ordre du DL : ");
+        scanf("%d", &n);
+        
+        C = developpement_limite(&A, a, n);
+        if (C) {
+          printf("\nDeveloppement limite en %.2f a l'ordre %d :\n", a, n);
+          afficher_DL_polynome(C, a);
+          free(C);
+        }
+        break;
+      }
+      
+      case 6: {
+        A = initialiser_polynome_avec_choix();
+        float a, b, eps;
+        int Nmax;
+        printf("Intervalle de recherche [a, b] : ");
+        scanf("%f %f", &a, &b);
+        printf("Tolerance (ex: 1e-6) : ");
+        scanf("%f", &eps);
+        printf("Nombre maximum d'iterations : ");
+        scanf("%d", &Nmax);
+        
+        float racine = racine_interv(&A, a, b, eps, Nmax);
+        float valeur = evaluation_polynome(&A, racine);
+        
+        printf("\nRacine approximee : %.6f\n", racine);
+        printf("f(%.6f) = %.2e\n", racine, valeur);
+        
+        if (fabs(valeur) < eps) {
+          printf("Convergence validee (|f(x)| < %.1e)\n", eps);
+        } else {
+          printf("Attention : convergence limitee (|f(x)| = %.1e)\n", fabs(valeur));
+        }
+        break;
+      }
+      
+      case 7:
+        printf("\nProgramme termine. Operations enregistrees dans operations.log\n");
+        logger_operation("Programme", "Fin normale");
+        break;
+        
+      default:
+        printf("\nChoix invalide, veuillez recommencer.\n");
+        logger_operation("ERREUR", "Choix menu invalide");
+        break;
+    }
+    
+  } while (choix != 7);
+  
+  // Fermer le fichier log
+  fermer_log();
+  
+  return 0;
+}
