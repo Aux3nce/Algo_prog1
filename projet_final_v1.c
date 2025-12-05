@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>  // Ajouter en haut
+#include <time.h>
 
 /* ==========Fichier Journal (LOG)========== */
 FILE *log_file = NULL;
