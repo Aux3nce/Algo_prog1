@@ -2,6 +2,38 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>  // Ajouter en haut
+
+/* ==========Fichier Journal (LOG)========== */
+FILE *log_file = NULL;
+
+void ouvrir_log() {
+    log_file = fopen("operations.log", "a");  // "a" pour append (ajouter)
+    if (log_file) {
+        time_t now;
+        time(&now);
+        fprintf(log_file, "\n=== Session du %s ===\n", ctime(&now));
+    }
+}
+
+void logger_operation(const char *operation, const char *details) {
+    if (log_file) {
+        time_t now;
+        time(&now);
+        struct tm *local = localtime(&now);
+        fprintf(log_file, "[%02d:%02d:%02d] %s - %s\n", 
+                local->tm_hour, local->tm_min, local->tm_sec,
+                operation, details);
+        fflush(log_file);  // Écrire immédiatement
+    }
+}
+
+void fermer_log() {
+    if (log_file) {
+        fprintf(log_file, "=== Fin de session ===\n\n");
+        fclose(log_file);
+    }
+}
 
 /* ==========Définition de notre structure========== */
 
@@ -84,6 +116,54 @@ float application(polynome *A, float x) {
     puissance = puissance * x; // On incrémente la puissance pour créer x^(i+1)
   }
   return y;
+}
+/*==========Enregistrement des polynômes==========*/
+polynome lire_polynome_clavier() {
+    return initialiser_polynome();
+}
+
+polynome lire_polynome_fichier(const char *filename) {
+    polynome A;
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Erreur : impossible d'ouvrir le fichier %s\n", filename);
+        A.taille = 1;
+        A.coef[0] = 0;
+        return A;
+    }
+    
+    // Format attendu : "degre coef0 coef1 ... coefN"
+    int degre;
+    fscanf(file, "%d", &degre);
+    A.taille = degre + 1;
+    
+    for (int i = 0; i < A.taille; i++) {
+        fscanf(file, "%d", &A.coef[i]);
+    }
+    
+    fclose(file);
+    logger_operation("Lecture polynome fichier", filename);
+    return A;
+}
+
+// Menu de choix d'entrée
+polynome initialiser_polynome_avec_choix() {
+    printf("\nMode d'entree du polynome :\n");
+    printf("1. Saisie clavier\n");
+    printf("2. Fichier texte\n");
+    printf("Choix : ");
+    
+    int choix;
+    scanf("%d", &choix);
+    
+    if (choix == 2) {
+        char filename[100];
+        printf("Nom du fichier : ");
+        scanf("%s", filename);
+        return lire_polynome_fichier(filename);
+    } else {
+        return lire_polynome_clavier();
+    }
 }
 
 /* ==========Somme de 2 polynômes========== */
