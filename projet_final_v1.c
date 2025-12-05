@@ -178,12 +178,12 @@ polynome *derivee_polynome(polynome *A) {
 }
 
 polynome *derivee_ordre_n(polynome *A, int n) {
-  polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
+polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
   int k;
   while (k<=n) {
-    k--;
-    C = derivee_polynome(derivee_ordre_n(A,k-1));
+  k--;
+  C = derivee_polynome(derivee_ordre_n(A,k-1));
   }
   return C;
 }
