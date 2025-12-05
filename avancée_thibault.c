@@ -127,26 +127,40 @@ polynome *produits_polynomes(polynome *A, polynome *B) {
   return C;
 }
 
+polynome *derivee_polynome(polynome *A) {
+  polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
+  if (!C) return NULL;
+  C->taille = A->taille - 1;
+    for (int i = 1; i<= A->taille - 1; i++) {
+      C->coef[i-1] = i*(A->coef[i]);
+    }
+  return C;
+}
+
 polynome *derivee_ordre_n(polynome *A, int n) {
 polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
+  if (n == 0) {
+  return A;
+  }
+ 
+  else {
+  polynome *temporaire = A;
   int k;
-  while (k<=n) {
-  k--;
-  C = derivee_polynome(derivee_ordre_n(A,k-1));
+  for (k = 0; k<n; k++) {
+  C = derivee_polynome(temporaire);
+  free (temporaire);
+  temporaire = C;
+  }
   }
   return C;
 }
 
-float integrale_polynome(polynome *A) {
-printf("Sélectionnez un intervalle d'intégration : ");
-float a;
-float b;
-scanf("[%f,%f]\n",&a,&b);
+float integrale_polynome(polynome *A, int a, int b) {
 int i;
 float S=0;
-float puiss_a=a;
-float puiss_b=b;
+int puiss_a=a;
+int puiss_b=b;
 for (i = 0; i<=A->taille-1;i++) {
 S+=(A->coef[A->taille-1-i]/(i+1))*(puiss_b - puiss_a);
 puiss_a=puiss_a*a;
@@ -168,20 +182,24 @@ return P;
 }
 }
 
-polynome *developpement_limite(polynome *A, float a) {
+polynome *developpement_limite(polynome *A, int a) {
 polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
 if (!C) return NULL;
 printf("A quel ordre voulez-vous faire votre DL : ");
 int n;
-scanf("%d ",&n);
+scanf("%d",&n);
+C->taille = n+1;
 int i;
 for(i = 0; i<=n; i++) {
-C->coef[n-i] = evaluation_polynome(a,derivee_ordre_n(A,i))/fact(i);
+polynome *derivee = derivee_ordre_n(A,i);
+int val = evaluation_polynome(a, derivee);
+C->coef[i] = val/fact(i);
+free(derivee);
 }
 return C;
 }
 
-void afficher_DL_polynome(polynome *A, float a) {
+void afficher_DL_polynome(polynome *A, int a) {
   if (A == NULL) return;
  
   int affiche_qqchose = 0;
@@ -204,7 +222,7 @@ void afficher_DL_polynome(polynome *A, float a) {
     }
    
     if (i > 0) {
-      printf("(X-%f)", a);
+      printf("(X-%d)", a);
       if (i > 1) printf("^%d", i);
     }
     affiche_qqchose = 1;
