@@ -147,95 +147,112 @@ polynome *produits_polynomes(polynome *A, polynome *B) {
 
 /* ==========Dérivation d'un polynôme========== */
 
-polynome *derivee_polynome_auxence(polynome *A) {
-    polynome *C = malloc(sizeof(polynome));
-    if (!C) return NULL;
-    if (A->taille <= 1) {
-        C->taille = 1;
-        C->coef[0] = 0;
-    } else {
-        C->taille = A->taille - 1;
-        for (int i = 0; i < C->taille; i++) {
-            C->coef[i] = A->coef[i+1] * (i+1);
-        }
-    }
-    return C;
-}
-
 polynome *derivee_polynome(polynome *A) {
   polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
-  if (A->taille <= 1) {
-    C->taille = 1;
-    C-> coef[0] = 0;
-  }
-  else {
-    for (int i = A->taille - 2; i>=0; i--) {
-      C->coef[i] = (A->taille-1-i)*(A->coef[i]);
+  C->taille = A->taille - 1;
+    for (int i = 1; i<= A->taille - 1; i++) {
+      C->coef[i-1] = i*(A->coef[i]);
     }
-  }
   return C;
 }
 
 polynome *derivee_ordre_n(polynome *A, int n) {
 polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
-  int k;
-  while (k<=n) {
-  k--;
-  C = derivee_polynome(derivee_ordre_n(A,k-1));
+  if (n == 0) {
+  return A;
   }
-  return C;
-}
-
-/* ==========Intégration d'un polynôme========== */
-
-float integrale_polynome(polynome *A) {
-  printf("Sélectionnez un intervalle d'intégration : ");
-  float a;
-  float b;
-  scanf("[%f,%f]\n",&a,&b);
-  int i;
-  float S=0;
-  float puiss_a=a;
-  float puiss_b=b;
-  for (i = 0; i<=A->taille-1;i++) {
-    S+=(A->coef[A->taille-1-i]/(i+1))*(puiss_b - puiss_a);
-    puiss_a=puiss_a*a;
-    puiss_b=puiss_b*b;
-  }
-  return S;  
-}
-
-/* ==========Développement limité d'un polynôme========== */
-
-int fact(int n) {
-  if (n == 0 || n == 1) {
-  return 1;
-  }
+ 
   else {
-  int P = 1;
+  polynome *temporaire = A;
   int k;
-  for (k=1; k<=n; k++){
-  P = P*k;
+  for (k = 0; k<n; k++) {
+  C = derivee_polynome(temporaire);
+  free (temporaire);
+  temporaire = C;
   }
-  return P;
-  }
-}
-
-polynome *developpement_limite(polynome *A, float a) {
-  polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
-  if (!C) return NULL;
-  printf("A quel ordre voulez-vous faire votre DL : ");
-  int n;
-  scanf("%d ",&n);
-  int i;
-  for(i = 0; i<=n; i++) {
-    C->coef[n-i] = evaluation_polynome(a,derivee_ordre_n(A,i))/fact(i);
   }
   return C;
 }
 
+float integrale_polynome(polynome *A, int a, int b) {
+int i;
+float S=0;
+int puiss_a=a;
+int puiss_b=b;
+for (i = 0; i<=A->taille-1;i++) {
+S+=(A->coef[A->taille-1-i]/(i+1))*(puiss_b - puiss_a);
+puiss_a=puiss_a*a;
+puiss_b=puiss_b*b;
+}
+return S;  
+}
+int fact(int n) {
+if (n == 0 || n == 1) {
+return 1;
+}
+else {
+int P = 1;
+int k;
+for (k=1; k<=n; k++){
+P = P*k;
+}
+return P;
+}
+}
+
+polynome *developpement_limite(polynome *A, int a) {
+polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
+if (!C) return NULL;
+printf("A quel ordre voulez-vous faire votre DL : ");
+int n;
+scanf("%d",&n);
+C->taille = n+1;
+int i;
+for(i = 0; i<=n; i++) {
+polynome *derivee = derivee_ordre_n(A,i);
+int val = evaluation_polynome(a, derivee);
+C->coef[i] = val/fact(i);
+free(derivee);
+}
+return C;
+}
+
+void afficher_DL_polynome(polynome *A, int a) {
+  if (A == NULL) return;
+ 
+  int affiche_qqchose = 0;
+ 
+  for (int i = A->taille - 1; i>=0; i--) {
+    int coef = A->coef[i];
+   
+    if (coef != 0) {
+      if (affiche_qqchose) {
+        printf(" %c ", (coef > 0) ? '+' : '-');
+        if (coef < 0) coef = -coef;
+    }
+    else if (coef < 0) {
+      printf("-");
+      coef = -coef;
+    }
+   
+    if (coef != 1 || i == 0) {
+      printf("%d", coef);
+    }
+   
+    if (i > 0) {
+      printf("(X-%d)", a);
+      if (i > 1) printf("^%d", i);
+    }
+    affiche_qqchose = 1;
+    }
+  }
+  if (!affiche_qqchose) {
+    printf("0");
+  }
+  printf("\n");
+}
 /* ==========Recherche racine d'un polynôme========== */
 
 float application(polynome *A, float x) {
