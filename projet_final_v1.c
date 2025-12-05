@@ -75,6 +75,17 @@ float evaluation_polynome(float a, polynome *A) {
   return S;
 }
 
+float application(polynome *A, float x) {
+  float y = 0.0; // Image que l'on renvoie
+  float puissance = 1.0; // On initialise à x^0
+  
+  for (int i = 0; i < A->taille; i++) {
+    y = y + A->coef[i] * puissance;
+    puissance = puissance * x; // On incrémente la puissance pour créer x^(i+1)
+  }
+  return y;
+}
+
 /* ==========Somme de 2 polynômes========== */
 
 polynome *somme_polynomes(polynome *A, polynome *B) {
@@ -195,6 +206,8 @@ float integrale_polynome(polynome *A) {
   }
   return S;  
 }
+
+/* ==========Développement limité d'un polynôme========== */
 
 int fact(int n) {
   if (n == 0 || n == 1) {
@@ -381,10 +394,17 @@ int main(void) {
         afficher_polynome(C);
         break;
       case 4 :
-
+        A = initialiser_polynome();
+        C = integrate_polynome(&A);
+        afficher_polynome(C);
         break;
       case 5 :
-
+        A = initialiser_polynome();
+        float a;
+        printf("Sélectionner le point en lequel vous souhaitez faire le DL :");
+        scanf("%f", a);
+        C = developpement_limite(&A, a);
+        afficher_polynome(C);
         break;
       case 6 :
         A = initialiser_polynome();
