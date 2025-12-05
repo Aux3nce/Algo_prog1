@@ -574,6 +574,7 @@ int main(void) {
     char filename[100];
     printf("Nom du fichier pour sauvegarder (ex: mon_polynome.txt) : ");
     scanf("%s", filename);
+    create_fichier_polynome(filename)
     
     switch(choix) {
       case 1: {
