@@ -60,8 +60,8 @@ void afficher_polynome (polynome *A) {
 
 float evaluation_polynome(int a, polynome *A) {
     float S = 0;
-    for (int i = 0; i < A->taille; i++) {
-        S = S * a + A->coef[i];  // Application de la méthode de Horner
+    for (int i = A->taille - 1; i >= 0; i--) {  // Du plus haut au plus bas
+        S = S * a + A->coef[i];
     }
     return S;
 }
@@ -163,15 +163,20 @@ puiss_b=puiss_b*b;
 }
 return S;  
 }
-
-
 int fact(int n) {
-    int P = 1;
-    for (int k = 1; k <= n; k++) {
-        P *= k;
-    }
-    return P;
+if (n == 0 || n == 1) {
+return 1;
 }
+else {
+int P = 1;
+int k;
+for (k=1; k<=n; k++){
+P = P*k;
+}
+return P;
+}
+}
+
 
 /*polynome *developpement_limite(polynome *A, int a) {
     polynome *C = malloc(sizeof(polynome)); // Allocation mémoire pour C
@@ -205,10 +210,10 @@ int fact(int n) {
 
 
 void developpement_limite(polynome *A, int n, float a) {
-    // Evaluation du polynôme au point a
-    float f = evaluation_polynome(a, A);  
+    float f;
+    f = evaluation_polynome(a, A); // On calcule A(a)
     printf("Le développement de Taylor de p est :\n");
-    printf("%.0f", f);  // Affichage du terme constant A(a)
+    printf("%.0f", f); // On affiche A(a)
 
     // Pour chaque dérivée jusqu'à l'ordre n
     polynome *temporaire = malloc(sizeof(polynome));  // Allouer mémoire pour le polynôme temporaire
@@ -219,27 +224,30 @@ void developpement_limite(polynome *A, int n, float a) {
     *temporaire = *A;  // Copier A dans temporaire
 
     for (int i = 1; i <= n; i++) {
-        // Calcul de la dérivée d'ordre i
+        // Calcul de la dérivée
         polynome *deriv = derivee_polynome(temporaire);
-        float t = evaluation_polynome(a, deriv);  // Evaluation de la dérivée en a
-        int m = fact(i);  // Calcul de i!
-
+        float t = evaluation_polynome(a, deriv); // Évaluation de la dérivée en a
+        int m = fact(i); // Calcul de i!
+float x =t/m;
         // Affichage du terme du développement limité
-        // On affiche (X - a) plutôt que (X + a)
-        if (a != 0) {  // Si a != 0, on utilise (x - a)
-            printf(" + ((X - %.0f)^%d)/%d * %.0f", a, i, m, t);
-        } else {  // Si a == 0, c'est (X)^i
-            printf(" + (X^%d)/%d * %.0f", i, m, t);
-        }
-
-        free(temporaire);  // Libérer la mémoire de la dérivée précédente
-
-        temporaire = deriv;  // Copier la nouvelle dérivée pour l'itération suivante
+        if (a < 0) {
+    printf(" + %.0f*((X + %.0f)^%d)", x, fabs(a), i);
+}
+else if (a == 0) {
+    printf(" + %.0f*(X^%d)", x, i);
+}
+else {
+    printf(" + %.0f*((X - %.0f)^%d)", x, a, i);  // X - a, pas X + a
+}
+        *temporaire = *deriv;  // D'abord copier
+free(deriv);  
     }
 
-    free(temporaire);  // Libérer la mémoire du polynôme temporaire après le dernier calcul
+    free(temporaire); // Libérer la mémoire du polynôme temporaire
     printf("\n");
 }
+
+
 
 
 int main(void) {
@@ -300,7 +308,7 @@ int n;
       printf("A quel ordre voulez-vous faire votre DL : ");
 scanf("%d",&n);
 A = initialiser_polynome();
-developpement_limite(&A,n,a);
+developpement_limite(&A,n,u);
 //afficher_DL_polynome(C,u);
         break;
       case 6 :
