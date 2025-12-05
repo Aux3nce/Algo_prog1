@@ -171,6 +171,70 @@ C->coef[i] = evaluation_polynome(a,derivee_polynome(A))
 
 }
 
+float racine_intervalle(polynome *A, float a, float b, float eps, int Nmax) {
+    // Vérifier les conditions de Bolzano
+    float fa = application(A, a);
+    float fb = application(A, b);
+    
+    if (fa * fb > 0) {
+        printf("Attention : f(a) et f(b) ont meme signe, pas de garantie de racine dans [%f, %f]\n", a, b);
+        logger_operation("Newton", "Intervalle sans changement de signe");
+    }
+    
+    // Choisir le meilleur point initial
+    float x0;
+    if (fabsf(fa) < fabsf(fb)) {
+        x0 = a;
+    } else {
+        x0 = b;
+    }
+    
+    // Appliquer Newton
+    polynome *derivee = derivee_polynome(A);
+    float x = x0;
+    
+    char log_msg[200];
+    snprintf(log_msg, sizeof(log_msg), "Intervalle [%f,%f], x0=%f, eps=%e, Nmax=%d", 
+             a, b, x0, eps, Nmax);
+    logger_operation("Newton demarre", log_msg);
+    
+    for (int n = 0; n < Nmax; n++) {
+        float fx = application(A, x);
+        float fpx = application(B, x);
+        
+        // Condition d'arrêt
+        if (fabsf(fx) < eps) {
+            snprintf(log_msg, sizeof(log_msg), "Convergence en %d iterations, x=%f, f(x)=%e", 
+                     n+1, x, fx);
+            logger_operation("Newton reussi", log_msg);
+            free(derivee);
+            return x;
+        }
+        
+        // Éviter division par zéro
+        if (fabsf(fpx) < 1e-15) {
+            logger_operation("Newton erreur", "Derivee nulle");
+            free(derivee);
+            return x;
+        }
+        
+        // Itération de Newton
+        float x_new = x - fx / fpx;
+        
+        // Vérifier si on reste dans l'intervalle
+        if (x_new < a || x_new > b) {
+            printf("Newton sort de l'intervalle, utilisation de la bissection\n");
+            x_new = (a + b) / 2.0;
+        }
+        
+        x = x_new;
+    }
+    
+    logger_operation("Newton", "Maximum d'iterations atteint");
+    free(derivee);
+    return x;
+}
+
 int main(void) {
 
   int choix;
