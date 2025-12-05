@@ -129,7 +129,124 @@ polynome *derivee_polynome(polynome *A) {
     return C;
 }
 
+/* ==========Correction de la fonction derivee_ordre_n ========== */
 
+polynome *derivee_ordre_n(polynome *A, int n) {
+    if (!A || n < 0) return NULL;
+    
+    // Si n=0, retourner une copie du polynôme original
+    if (n == 0) {
+        polynome *C = malloc(sizeof(polynome));
+        if (!C) return NULL;
+        C->taille = A->taille;
+        for (int i = 0; i < A->taille; i++) {
+            C->coef[i] = A->coef[i];
+        }
+        return C;
+    }
+    
+    polynome *resultat = malloc(sizeof(polynome));
+    if (!resultat) return NULL;
+    
+    // Copier A dans resultat
+    resultat->taille = A->taille;
+    for (int i = 0; i < A->taille; i++) {
+        resultat->coef[i] = A->coef[i];
+    }
+    
+    // Appliquer la dérivation n fois
+    for (int ordre = 0; ordre < n; ordre++) {
+        polynome *temp = resultat;
+        resultat = derivee_polynome_auxence(temp); // Utiliser la version correcte
+        
+        if (ordre > 0) { // Ne pas free le premier (qui est A)
+            free(temp);
+        }
+        
+        if (!resultat) {
+            if (ordre > 0) free(temp);
+            return NULL;
+        }
+    }
+    
+    return resultat;
+}
+
+/* ==========Correction de evaluation_polynome ========== */
+
+float evaluation_polynome(float a, polynome *A) {
+    if (!A) return 0;
+    
+    float S = 0;
+    float puiss_a = 1; // a^0
+    
+    // Parcourir des coefficients de degré 0 à degré max
+    for (int i = 0; i < A->taille; i++) {
+        S += A->coef[i] * puiss_a;
+        puiss_a = puiss_a * a;
+    }
+    return S;
+}
+
+/* ==========Correction de developpement_limite ========== */
+
+polynome *developpement_limite(polynome *A, float a) {
+    if (!A) return NULL;
+    
+    printf("A quel ordre voulez-vous faire votre DL : ");
+    int n;
+    scanf("%d", &n); // Retirer l'espace après %d
+    
+    if (n < 0) {
+        printf("L'ordre doit être positif\n");
+        return NULL;
+    }
+    
+    polynome *C = malloc(sizeof(polynome));
+    if (!C) return NULL;
+    
+    // Initialiser C avec la bonne taille et coefficients à 0
+    C->taille = n + 1; // Degré n signifie taille n+1
+    for (int i = 0; i < C->taille; i++) {
+        C->coef[i] = 0;
+    }
+    
+    // Calculer les coefficients du DL
+    for (int i = 0; i <= n; i++) {
+        polynome *derivee = derivee_ordre_n(A, i);
+        if (!derivee) {
+            free(C);
+            return NULL;
+        }
+        
+        // Coefficient du DL : f^{(i)}(a) / i!
+        float valeur_derivee = evaluation_polynome(a, derivee);
+        float coeff = valeur_derivee / fact(i);
+        
+        // Stocker dans le coefficient de degré i
+        C->coef[i] = coeff;
+        
+        free(derivee);
+    }
+    
+    return C;
+}
+
+/* ==========Fonction factorielle (version améliorée) ========== */
+
+int fact(int n) {
+    if (n < 0) return 1; // Pas de factorielle négative
+    int resultat = 1;
+    for (int k = 1; k <= n; k++) {
+        // Vérification de dépassement (optionnel)
+        if (resultat > INT_MAX / k) {
+            printf("Attention : factorielle trop grande pour n=%d\n", n);
+            return INT_MAX;
+        }
+        resultat *= k;
+    }
+    return resultat;
+}
 
 polynome *integrale_polynome(polynome *A) {
 printf("Sélectionnez un intervalle d'intégration : ");
