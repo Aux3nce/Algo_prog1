@@ -209,10 +209,9 @@ return P;
 
 
 
-void developpement_limite(polynome *A, int n, float a) {
+void developpement_limite(polynome *A, int n, int a) {
     float f;
     f = evaluation_polynome(a, A); // On calcule A(a)
-    printf("Le développement de Taylor de p est :\n");
     printf("%.0f", f); // On affiche A(a)
 
     // Pour chaque dérivée jusqu'à l'ordre n
@@ -229,6 +228,10 @@ void developpement_limite(polynome *A, int n, float a) {
         float t = evaluation_polynome(a, deriv); // Évaluation de la dérivée en a
         int m = fact(i); // Calcul de i!
 float x =t/m;
+if (t == 0) {
+printf(" ");
+}
+else {
         // Affichage du terme du développement limité
         if (a < 0) {
     printf(" + %.0f*((X + %.0f)^%d)", x, fabs(a), i);
@@ -237,7 +240,8 @@ else if (a == 0) {
     printf(" + %.0f*(X^%d)", x, i);
 }
 else {
-    printf(" + %.0f*((X - %.0f)^%d)", x, a, i);  // X - a, pas X + a
+    printf(" + %.0f*((X - %d)^%d)", x, a, i);  // X - a, pas X + a
+}
 }
         *temporaire = *deriv;  // D'abord copier
 free(deriv);  
