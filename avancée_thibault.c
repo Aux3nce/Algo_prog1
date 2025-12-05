@@ -127,24 +127,6 @@ polynome *produits_polynomes(polynome *A, polynome *B) {
   return C;
 }
 
-
-
-
-polynome *derivee_polynome(polynome *A) {
-  polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
-  if (!C) return NULL;
-  if (A->taille <= 1) {
-    C->taille = 1;
-    C-> coef[0] = 0;
-  }
-  else {
-    for (int i = A->taille - 2; i>=0; i--) {
-      C->coef[i] = (A->taille-1-i)*(A->coef[i]);
-    }
-  }
-  return C;
-}
-
 polynome *derivee_ordre_n(polynome *A, int n) {
 polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL;
