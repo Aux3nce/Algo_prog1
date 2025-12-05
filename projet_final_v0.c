@@ -396,7 +396,15 @@ int main(void) {
 
         break;
       case 5 :
-
+        A = initialiser_polynome();
+        float point_dl;
+        printf("Sélectionner le point en lequel vous souhaitez faire le DL : ");
+        scanf("%f", &point_dl); // Ajouter & et corriger le nom de variable
+        C = developpement_limite(&A, point_dl);
+        if (C) {
+          printf("Développement limité d'ordre %d : ", C->taille - 1);
+          afficher_polynome(C);
+        }
         break;
       case 6 :
 
