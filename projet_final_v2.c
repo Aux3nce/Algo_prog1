@@ -561,8 +561,7 @@ int main(void) {
     printf("4. Integrale d'un polynome sur un intervalle\n");
     printf("5. Developpement limite d'un polynome autour d'un point\n");
     printf("6. Racine d'un polynome sur un intervalle\n");
-    printf("7. Creer/sauvegarder un polynome dans un fichier\n");
-    printf("8. Quitter\n\n");
+    printf("7. Quitter\n\n");
     printf("=========================\n\n");
     printf("Votre choix : ");
     scanf("%d", &choix);
@@ -571,6 +570,10 @@ int main(void) {
     char log_msg[50];
     snprintf(log_msg, sizeof(log_msg), "Choix menu : %d", choix);
     logger_operation("Menu", log_msg);
+
+    char filename[100];
+    printf("Nom du fichier pour sauvegarder (ex: mon_polynome.txt) : ");
+    scanf("%s", filename);
     
     switch(choix) {
       case 1: {
@@ -669,70 +672,7 @@ int main(void) {
         }
         break;
       }
-      
-      case 7: {  // NOUVEAU - Créer/sauvegarder un polynôme
-        printf("\n--- Creation/sauvegarde d'un polynome ---\n");
-        printf("1. Creer un nouveau polynome et le sauvegarder\n");
-        printf("2. Sauvegarder un polynome existant\n");
-        printf("Choix : ");
-        int sous_choix;
-        scanf("%d", &sous_choix);
-        
-        if (sous_choix == 1) {
-          // Créer un polynôme et le sauvegarder
-          A = initialiser_polynome();
-          char filename[100];
-          printf("Nom du fichier pour sauvegarder (ex: mon_polynome.txt) : ");
-          scanf("%s", filename);
-          
-          // Sauvegarder dans un fichier
-          FILE *file = fopen(filename, "w");
-          if (file) {
-            fprintf(file, "%d\n", A.taille - 1);  // Degré
-            for (int i = 0; i < A.taille; i++) {
-              fprintf(file, "%.6f\n", A.coef[i]);  // Coefficients
-            }
-            fclose(file);
-            printf("Polynome sauvegarde dans %s\n", filename);
-            
-            // Log
-            snprintf(log_msg, sizeof(log_msg), "Polynome degre %d sauvegarde dans %s", 
-                     A.taille - 1, filename);
-            logger_operation("Sauvegarde fichier", log_msg);
-          } else {
-            printf("Erreur : impossible de creer le fichier\n");
-          }
-        } else if (sous_choix == 2) {
-          // Sauvegarder un polynôme déjà créé
-          printf("Voulez-vous sauvegarder le dernier polynome cree ? (o/n) : ");
-          char reponse;
-          scanf(" %c", &reponse);
-          
-          if (reponse == 'o' || reponse == 'O') {
-            char filename[100];
-            printf("Nom du fichier : ");
-            scanf("%s", filename);
-            
-            FILE *file = fopen(filename, "w");
-            if (file) {
-              fprintf(file, "%d\n", A.taille - 1);
-              for (int i = 0; i < A.taille; i++) {
-                fprintf(file, "%.6f\n", A.coef[i]);
-              }
-              fclose(file);
-              printf("Polynome sauvegarde dans %s\n", filename);
-              
-              snprintf(log_msg, sizeof(log_msg), "Polynome sauvegarde dans %s", filename);
-              logger_operation("Sauvegarde fichier", log_msg);
-            }
-          } else {
-            printf("Aucun polynome a sauvegarder. Creer d'abord un polynome.\n");
-          }
-        }
-        break;
-      }
-      
-      case 8:
+      case 7:
         printf("\nProgramme termine. Operations enregistrees dans operations.log\n");
         logger_operation("Programme", "Fin normale");
         break;
