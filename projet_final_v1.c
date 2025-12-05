@@ -3,12 +3,16 @@
 #include <string.h>
 #include <math.h>
 
+/* ==========Définition de notre structure========== */
+
 #define TAILLE_MAX 100
 
 typedef struct {
   float coef[TAILLE_MAX];
   int taille;
   } polynome;
+
+/*==========Manipulation des polynômes==========*/
 
 polynome initialiser_polynome(void) {
   int degre;
@@ -71,6 +75,8 @@ float evaluation_polynome(float a, polynome *A) {
   return S;
 }
 
+/* ==========Somme de 2 polynômes========== */
+
 polynome *somme_polynomes(polynome *A, polynome *B) {
   polynome *C = malloc(sizeof(polynome)); //Allocation mémoire
   if (!C) return NULL; //Vérification d'allocation
@@ -110,6 +116,8 @@ polynome *somme_polynomes(polynome *A, polynome *B) {
   return C;
 }
 
+/* ==========Produits de 2 polynômes========== */
+
 polynome *produits_polynomes(polynome *A, polynome *B) {
   polynome *C = malloc(sizeof(polynome)); // Allocation mémoire
   if (!C) return NULL;
@@ -125,6 +133,8 @@ polynome *produits_polynomes(polynome *A, polynome *B) {
   }
   return C;
 }
+
+/* ==========Dérivation d'un polynôme========== */
 
 polynome *derivee_polynome_auxence(polynome *A) {
     polynome *C = malloc(sizeof(polynome));
@@ -166,6 +176,8 @@ polynome *derivee_ordre_n(polynome *A, int n) {
   }
   return C;
 }
+
+/* ==========Intégration d'un polynôme========== */
 
 float integrale_polynome(polynome *A) {
   printf("Sélectionnez un intervalle d'intégration : ");
@@ -210,6 +222,8 @@ polynome *developpement_limite(polynome *A, float a) {
   }
   return C;
 }
+
+/* ==========Recherche racine d'un polynôme========== */
 
 float application(polynome *A, float x) {
   float y = 0.0; // Image que l'on renvoie
@@ -322,6 +336,8 @@ float racine_interv(polynome *A, float a, float b, float eps, int Nmax) {
     free(deriv);
     return x;
 }
+
+/* ==========Affichage du menu========== */
 
 int main(void) {
 
